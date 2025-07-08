@@ -1,44 +1,61 @@
-import { Body, Controller, Get, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Request,
+  Response,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { Post } from '@nestjs/common';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
+import { ApiResponse } from '../../helper/response.helper';
+import { ResponseCode, ResponseMessage } from '../../const/response.const';
 import { LocalAuthGuard } from '../../guards/local-auth.guard';
-import { Roles } from '../../decorators/roles.decorator';
-import { RolesGuard } from '../../guards/roles.guard';
-import { Role } from '../../enums/roles.enum';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
+import { UserService } from '../user/user.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UserService,
+  ) {}
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(@Request() req) {
-    return this.authService.login(req.user);
+  async login(@Request() req, @Response() res) {
+    const ans = await this.authService.login(req.user);
+    return ApiResponse(res, ResponseCode.SUCCESS, ResponseMessage.SUCCESS, ans);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@Request() req) {
-    return req.user;
+  async getProfile(@Request() req, @Response() res) {
+    const id = req.user.id as string;
+    const currentUser = await this.userService.getUserById(id);
+    return ApiResponse(
+      res,
+      ResponseCode.SUCCESS,
+      ResponseMessage.SUCCESS,
+      currentUser,
+    );
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard) // ✅ Cần JWT guard trước
-  @Roles(Role.ADMIN) // 👈 Chỉ ADMIN mới truy cập được
-  @Get('admin-dashboard')
-  getDashboard() {
-    return { message: 'Welcome admin!' };
+  @UseGuards(JwtAuthGuard)
+  @Get('get-id')
+  getId(@Request() req, @Response() res) {
+    const id = req.user.id;
+    return ApiResponse(res, ResponseCode.SUCCESS, ResponseMessage.SUCCESS, id);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard) // ✅ Cần JWT guard trước
-  @Roles(Role.USER) // 👈 Chỉ USER mới truy cập đượ
-  @Get('user-dashboard')
-  getUserDashboard() {
-    return { message: 'Welcome user!' };
-  }
-
-  @Get('crash')
-  crash() {
-    throw new Error('Lỗi thử nghiệm');
+  @UseGuards(JwtAuthGuard)
+  @Get('get-role')
+  getRole(@Request() req, @Response() res) {
+    const role = req.user.role;
+    return ApiResponse(
+      res,
+      ResponseCode.SUCCESS,
+      ResponseMessage.SUCCESS,
+      role,
+    );
   }
 }

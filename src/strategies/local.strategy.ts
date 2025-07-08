@@ -7,15 +7,13 @@ import { Request } from 'express';
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
   constructor(private authService: AuthService) {
-    super({
-      usernameField: 'email',
-    });
+    super();
   }
 
-  async validate(email: string, password: string): Promise<any> {
-    const user = await this.authService.validateUser(email, password);
+  async validate(username: string, password: string): Promise<any> {
+    const user = await this.authService.validateUser(username, password);
     if (!user) {
-      throw new UnauthorizedException('Sai email hoặc mật khẩu');
+      throw new UnauthorizedException('Sai tên đăng nhập hoặc mật khẩu');
     }
     return user;
   }

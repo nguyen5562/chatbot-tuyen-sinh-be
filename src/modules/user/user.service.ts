@@ -1,63 +1,92 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from './schema/user.schema';
-import { Model } from 'mongoose';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { CreateUserDTO } from './dto/create-user.dto';
+import { UpdateUserDTO } from './dto/update-user.dto';
+import { PrismaClient, User } from '../../../generated/prisma';
 import * as bcrypt from 'bcrypt';
+import { ResponseMessage } from 'src/const/response.const';
 
 @Injectable()
 export class UserService {
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  private prisma: PrismaClient;
 
-  async createUser(createUserDto: CreateUserDto): Promise<User> {
-    const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash(createUserDto.password, salt);
-
-    const newUser = new this.userModel({
-      ...createUserDto,
-      hashed_password: hashedPassword,
-      role: 'user', // Default role
-    });
-    return newUser.save();
+  constructor() {
+    this.prisma = new PrismaClient();
   }
 
-  async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
-    const updated = await this.userModel.findByIdAndUpdate(id, updateUserDto, {
-      new: true,
+  async createUser(createUserDTO: CreateUserDTO): Promise<User> {
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: createUserDTO.username },
+          { email: createUserDTO.email },
+        ],
+      },
     });
-
-    if (!updated) {
-      throw new NotFoundException('User not found');
+    if (existingUser) {
+      throw new BadRequestException('Username hoặc email đã tồn tại');
     }
-    return updated;
+
+    const hashedPassword = await bcrypt.hash(createUserDTO.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        ...createUserDTO,
+        password: hashedPassword,
+      },
+    });
+    return user;
   }
 
-  async deleteUser(id: string): Promise<any> {
-    const result = await this.userModel.findByIdAndDelete(id);
-    if (!result) throw new NotFoundException(`User not found`);
-    return {
-      message: 'User deleted successfully',
-      statusCode: 200,
-    };
+  async updateUser(id: string, updateUserDTO: UpdateUserDTO): Promise<User> {
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: updateUserDTO,
+    });
+    return updatedUser;
   }
 
-  async findAllUsers(): Promise<User[]> {
-    return await this.userModel.find();
+  async deleteUser(id: string): Promise<void> {
+    await this.prisma.user.delete({
+      where: { id },
+    });
   }
 
-  async findUserById(id: string): Promise<User> {
-    const user = await this.userModel.findById(id);
+  async getAllUser(): Promise<User[]> {
+    const allUser = await this.prisma.user.findMany();
+    if (allUser.length === 0)
+      throw new NotFoundException(ResponseMessage.NOT_FOUND);
+    return allUser;
+  }
+
+  async getUserById(id: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(ResponseMessage.NOT_FOUND);
     }
     return user;
   }
 
-  async findUserByEmail(email: string): Promise<User> {
-    const user = await this.userModel.findOne({ email });
+  async getUserByUsername(username: string): Promise<User> {
+    const user = await this.prisma.user.findFirst({
+      where: { username },
+    });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException(ResponseMessage.NOT_FOUND);
+    }
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User> {
+    const user = await this.prisma.user.findFirst({
+      where: { email },
+    });
+    if (!user) {
+      throw new NotFoundException(ResponseMessage.NOT_FOUND);
     }
     return user;
   }

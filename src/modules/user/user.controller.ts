@@ -1,46 +1,60 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
   Post,
   Put,
+  Delete,
+  Body,
+  Param,
   ValidationPipe,
+  Request,
+  Response,
 } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserDTO } from './dto/create-user.dto';
+import { UpdateUserDTO } from './dto/update-user.dto';
+import { User } from '../../../generated/prisma';
+import { ApiResponse } from '../../helper/response.helper';
+import { ResponseCode, ResponseMessage } from '../../const/response.const';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  getAllUsers() {
-    return this.userService.findAllUsers();
+  async getAll(@Response() res): Promise<User[]> {
+    const ans = await this.userService.getAllUser();
+    return ApiResponse(res, ResponseCode.SUCCESS, ResponseMessage.SUCCESS, ans);
   }
 
   @Get(':id')
-  getUserById(@Param('id') id: string) {
-    return this.userService.findUserById(id);
+  async getById(@Param('id') id: string, @Response() res): Promise<User> {
+    const ans = await this.userService.getUserById(id);
+    return ApiResponse(res, ResponseCode.SUCCESS, ResponseMessage.SUCCESS, ans);
   }
 
   @Post()
-  createUser(@Body(ValidationPipe) createUserDto: CreateUserDto) {
-    return this.userService.createUser(createUserDto);
+  async create(
+    @Body(ValidationPipe) createUserDTO: CreateUserDTO,
+    @Response() res,
+  ): Promise<User> {
+    const ans = await this.userService.createUser(createUserDTO);
+    return ApiResponse(res, ResponseCode.CREATED, ResponseMessage.SUCCESS, ans);
   }
 
   @Put(':id')
-  updateUser(
+  async update(
     @Param('id') id: string,
-    @Body(ValidationPipe) updateUserDto: UpdateUserDto,
-  ) {
-    return this.userService.updateUser(id, updateUserDto);
+    @Body(ValidationPipe) updateUserDTO: UpdateUserDTO,
+    @Response() res,
+  ): Promise<User> {
+    const ans = await this.userService.updateUser(id, updateUserDTO);
+    return ApiResponse(res, ResponseCode.SUCCESS, ResponseMessage.SUCCESS, ans);
   }
 
   @Delete(':id')
-  deleteUser(@Param('id') id: string) {
-    return this.userService.deleteUser(id);
+  async delete(@Param('id') id: string, @Response() res): Promise<void> {
+    await this.userService.deleteUser(id);
+    return ApiResponse(res, ResponseCode.SUCCESS, ResponseMessage.SUCCESS);
   }
 }
