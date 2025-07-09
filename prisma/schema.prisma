@@ -26,6 +26,42 @@ model User {
   phoneNumber String?
   isActive    Boolean   @default(true)
   lockedUntil DateTime?
+  chats       Chat[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Chat {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  model       String
+  title       String?
+  description String?
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  messages    Message[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("chats")
+}
+
+model Message {
+  id        String      @id @default(auto()) @map("_id") @db.ObjectId
+  role      MessageRole
+  content   String
+  chatId    String      @db.ObjectId
+  chat      Chat        @relation(fields: [chatId], references: [id])
+  tokens    Int?
+  model     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@map("messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }
