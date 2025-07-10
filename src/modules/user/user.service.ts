@@ -11,7 +11,7 @@ import { ResponseMessage } from 'src/const/response.const';
 
 @Injectable()
 export class UserService {
-  private prisma: PrismaClient;
+  private readonly prisma: PrismaClient;
 
   constructor() {
     this.prisma = new PrismaClient();

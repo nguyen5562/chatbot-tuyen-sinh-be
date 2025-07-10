@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient, User } from '../../../generated/prisma';
+import { User } from '../../../generated/prisma';
 import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from '../../interface/auth.interface';
@@ -7,14 +7,10 @@ import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  private prisma: PrismaClient;
-
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-  ) {
-    this.prisma = new PrismaClient();
-  }
+  ) {}
 
   async validateUser(username: string, password: string) {
     const user = await this.userService.getUserByUsername(username);
